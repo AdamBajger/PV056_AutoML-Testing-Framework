@@ -244,6 +244,117 @@ optional arguments:
 }
 ```
 
+### Select features
+As the name suggests, this script will remove the worst features from each training split based on feature selection settings.
+```
+(venv)$ pv056-evalueate-features  --help
+usage: pv056-evaluate-features [-h] -c CONFIG_FS [-do DATASETS_CSV_OUT] -di
+                               DATASETS_CSV_IN
+
+PV056-AutoML-testing-framework
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c CONFIG_FS, --config-fs CONFIG_FS
+                        path to feature selection config file
+  -do DATASETS_CSV_OUT, --datasets-csv-out DATASETS_CSV_OUT
+                        path to a csv file which contains datasets used for FS
+                        and their respective result files
+  -di DATASETS_CSV_IN, --datasets-csv-in DATASETS_CSV_IN
+                        Path to csv file that contains previous data files
+                        mappings, locations and for example OD configurations
+
+```
+#### Example usage
+```
+(venv)$ pv056-remove-outliers  -c configs/fs/default.json -di datasets-rm.csv -do datasets-fs.csv
+```
+
+#### Example config file
+* *test_split_dir*
+    * Directory with splitted **test** datasets
+* *train_od_dir*
+    * generated **train** datasets with outlier detection values
+* *train_removed_dir*
+    * Directory where train data with **removed** outliers should be saved
+* *keep_original*
+    * Setting this to true will produce baseline datasets as well,
+    ie. datasets without any instances removed (default: `true`)
+* *percentage*
+    * How many percents of the largest outliers should be removed (0.0-100.0)
+    * int or List[int]
+```json
+{
+  "output_folder_path": "data/fs_outputs/",
+  "weka_jar_path": "data/java/weka.jar",
+  "blacklist_file_path": "data/fs_blacklist.csv",
+  "selection_methods": [
+    {
+      "source_library": "SCIKIT",
+      "leave_attributes_binarized": true,
+      "fs_method": {
+        "name": "SelectFpr",
+        "parameters": {
+          "alpha": 0.2
+        }
+      },
+      "score_func": {
+        "name": "chi2",
+        "parameters": {}
+      }
+    },
+    {
+      "source_library": "SCIKIT",
+      "leave_attributes_binarized": false,
+      "fs_method": {
+        "name": "SelectFpr",
+        "parameters": {
+          "alpha": 0.2
+        }
+      },
+      "score_func": {
+        "name": "chi2",
+        "parameters": {}
+      }
+    },
+    {
+      "source_library": "WEKA",
+      "eval_class": {
+        "name": "weka.attributeSelection.CfsSubsetEval",
+        "parameters": {
+          "M": true,
+          "L": true,
+          "Z": true,
+          "P": 3,
+          "E": 4
+        }
+      },
+      "search_class": {
+        "name": "weka.attributeSelection.BestFirst",
+        "parameters": {
+          "N": 5
+        }
+      }
+    },
+    {
+      "source_library": "WEKA",
+      "eval_class": {
+        "name": "weka.attributeSelection.InfoGainAttributeEval",
+        "parameters": {}
+      },
+      "search_class": {
+        "name": "weka.attributeSelection.Ranker",
+        "parameters": {
+          "T": 5E-3,
+          "N": -1
+        }
+      }
+    }
+  ]
+}
+
+```
+
 
 
 ### Run weka classifiers
@@ -391,7 +502,7 @@ zoo,RandomForest,trees,[-I 1000],LOF,{contamination: auto},10.0,0.95048,0.05723,
 
 ## All-in-one script
 To make the script easier to use, we have created a runnable shell script which runs the full
-OD pipeline without the need to execute each step separately.
+workflow pipeline without the need to execute each step separately.
 
 The script runs each step with its respective default configuration file found in the ```configs/```
 folder and its subdirectories. Assuming the virtual environment is set up (see [Installation guide](#installation-guide)), all you need to do is set the config files according to your
@@ -425,8 +536,9 @@ Script finished.
 ```
 
 ### Checking progress
-Depending on your setup, the script may take a long time to finish. In order to check how far the script got,
-you should peek into the `od_times.csv` and `clf_times.csv` files generated during execution for the progress
+Depending on your setup, the script may take a long time to finish. 
+Most steps will now output ongoing progress after each finished file. If it is not the case,
+you might try to peek into the `od_times.csv` and `clf_times.csv` files possibly generated during execution for the progress
 on outlier detection and classification, respectively.
 These files list the datasets already processed with the time it took for each of them.
 
