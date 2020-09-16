@@ -228,7 +228,7 @@ def main():
 
     dataframe = dataframe.round(5)
     if baseline_supplied:
-        dataframe["gain"] = dataframe[_str_accuracy+_str_base] - dataframe[_str_accuracy]
+        dataframe["gain"] = dataframe[_str_accuracy] - dataframe[_str_accuracy+_str_base]
     #print("FINAL DATA:")
     #print(dataframe.to_csv())
     with open(statistic_conf.output_table, "w") as ot:
